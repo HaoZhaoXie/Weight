@@ -7,11 +7,13 @@ import android.view.View;
 import android.widget.ScrollView;
 
 public class CustomScrollView extends ScrollView {
+    private static final int JUMP_SENSITIVITY = 240;
     private boolean isScrolledToTop = true;
     private boolean isScrolledToBottom = false;
-
     private ScrollViewListener scrollViewListener = null;
     private ISmartScrollChangedListener mSmartScrollChangedListener = null;
+    private float oldEventY = 0;
+    private float moveEventY = 0;
 
     public CustomScrollView(Context context) {
         super(context);
@@ -34,9 +36,11 @@ public class CustomScrollView extends ScrollView {
     }
 
     public interface ISmartScrollChangedListener {
-        void onScrolledToBottom();
+        void onScrolledToBottom(float startY, float moveY);
 
-        void onScrolledToTop();
+        void onScrolledToTop(float startY, float moveY);
+
+        void onScroll(float startY, float moveY);
     }
 
     public void setSmartScrollChangedListener(ISmartScrollChangedListener mSmartScrollChangedListener) {
@@ -45,26 +49,69 @@ public class CustomScrollView extends ScrollView {
 
     @Override
     public boolean onTouchEvent(MotionEvent ev) {
-        if (!canScroll() && ev.getAction() == MotionEvent.ACTION_MOVE) {
-            if (scrollViewListener != null) {
-                scrollViewListener.onScrollChanged(this, 0, 0, 0, 0);
+        final int action = ev.getAction();
+        switch (action & MotionEvent.ACTION_MASK) {
+            case MotionEvent.ACTION_MOVE: {
+                if (!canScroll()) {
+                    if (ev.getY() - oldEventY > JUMP_SENSITIVITY) {
+                        isScrolledToTop = true;
+                        isScrolledToBottom = false;
+                    } else if (ev.getY() - oldEventY < -JUMP_SENSITIVITY) {
+                        isScrolledToTop = false;
+                        isScrolledToBottom = true;
+                    } else {
+                        isScrolledToTop = false;
+                        isScrolledToBottom = false;
+                    }
+                } else {
+                    if (getScrollY() == 0) {
+                        isScrolledToTop = true;
+                        isScrolledToBottom = false;
+                    } else if (getScrollY() + getHeight() - getPaddingTop() - getPaddingBottom() == getChildAt(0).getHeight()) {
+                        isScrolledToBottom = true;
+                        isScrolledToTop = false;
+                    } else {
+                        isScrolledToTop = false;
+                        isScrolledToBottom = false;
+                    }
+                    notifyScrollChangedListeners(oldEventY, ev.getY());
+                }
+                moveEventY = ev.getY();
+                break;
             }
+            case MotionEvent.ACTION_DOWN: {
+                resetEventY(ev.getY());
+                break;
+            }
+            case MotionEvent.ACTION_CANCEL:
+            case MotionEvent.ACTION_UP:
+                resetEventY(0);
+                break;
+            case MotionEvent.ACTION_POINTER_UP:
+                resetEventY(0);
+                break;
         }
         return super.onTouchEvent(ev);
     }
 
-    @Override
-    protected void onOverScrolled(int scrollX, int scrollY, boolean clampedX, boolean clampedY) {
-        super.onOverScrolled(scrollX, scrollY, clampedX, clampedY);
-        if (scrollY == 0) {
-            isScrolledToTop = clampedY;
-            isScrolledToBottom = false;
-        } else {
-            isScrolledToTop = false;
-            isScrolledToBottom = clampedY;
-        }
-        notifyScrollChangedListeners();
+    private void resetEventY(float eventY) {
+        oldEventY = eventY;
     }
+
+//    @Override
+//    protected void onOverScrolled(int scrollX, int scrollY, boolean clampedX, boolean clampedY) {
+//        super.onOverScrolled(scrollX, scrollY, clampedX, clampedY);
+//        if (canScroll()) {
+//            if (scrollY == 0) {
+//                isScrolledToTop = clampedY;
+//                isScrolledToBottom = false;
+//            } else {
+//                isScrolledToTop = false;
+//                isScrolledToBottom = clampedY;
+//            }
+//        }
+//        notifyScrollChangedListeners(oldEventY, moveEventY);
+//    }
 
     @Override
     protected void onScrollChanged(int x, int y, int oldX, int oldY) {
@@ -72,31 +119,33 @@ public class CustomScrollView extends ScrollView {
         if (scrollViewListener != null) {
             scrollViewListener.onScrollChanged(this, x, y, oldX, oldY);
         }
-// API 9及之后走onOverScrolled方法监听,如兼容API 9之前的版本恢复此段代码
-//        if (android.os.Build.VERSION.SDK_INT < 9) {
-//            if (getScrollY() == 0) {
-//                isScrolledToTop = true;
-//                isScrolledToBottom = false;
-//            } else if (getScrollY() + getHeight() - getPaddingTop()-getPaddingBottom() == getChildAt(0).getHeight()) {
-//                isScrolledToBottom = true;
-//                isScrolledToTop = false;
-//            } else {
-//                isScrolledToTop = false;
-//                isScrolledToBottom = false;
-//            }
-//            notifyScrollChangedListeners();
-//        }
     }
 
-    private void notifyScrollChangedListeners() {
+    private void notifyScrollChangedListeners(float startY, float moveY) {
         if (isScrolledToTop) {
-            if (mSmartScrollChangedListener != null) {
-                mSmartScrollChangedListener.onScrolledToTop();
-            }
+            notifyScrollToTop(startY, moveY);
         } else if (isScrolledToBottom) {
-            if (mSmartScrollChangedListener != null) {
-                mSmartScrollChangedListener.onScrolledToBottom();
-            }
+            notifyScrollToBottom(startY, moveY);
+        } else {
+            notifyScroll(startY, moveY);
+        }
+    }
+
+    private void notifyScrollToTop(float startY, float moveY) {
+        if (mSmartScrollChangedListener != null) {
+            mSmartScrollChangedListener.onScrolledToTop(startY, moveY);
+        }
+    }
+
+    private void notifyScrollToBottom(float startY, float moveY) {
+        if (mSmartScrollChangedListener != null) {
+            mSmartScrollChangedListener.onScrolledToBottom(startY, moveY);
+        }
+    }
+
+    private void notifyScroll(float startY, float moveY) {
+        if (mSmartScrollChangedListener != null && startY != 0) {
+            mSmartScrollChangedListener.onScroll(startY, moveY);
         }
     }
 

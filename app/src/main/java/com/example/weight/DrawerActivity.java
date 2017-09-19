@@ -17,7 +17,7 @@ public class DrawerActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_drawer);
         drawerLayout = (DrawerLayout) findViewById(R.id.view_drawer);
-        drawerLayout.showFootView(true);
+        drawerLayout.showFootView(false);
         drawerLayout.showHeadView(true);
         LinearLayout headView = (LinearLayout) LayoutInflater.from(this).inflate(R.layout.view_drawer_head, null);
         LinearLayout contentView = (LinearLayout) LayoutInflater.from(this).inflate(R.layout.view_drawer_content, null);

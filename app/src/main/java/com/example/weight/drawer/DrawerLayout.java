@@ -39,7 +39,6 @@ public class DrawerLayout extends LinearLayout implements DrawerImpl, DrawerCont
         mContentView = (LinearLayout) findViewById(R.id.ll_content);
         mFootView = (LinearLayout) findViewById(R.id.ll_foot);
         mControlView = (CustomScrollView) findViewById(R.id.sv_control);
-        mControlView.setScrollViewListener(contentScrollChange);
         mControlView.setSmartScrollChangedListener(iSmartScrollChangedListener);
     }
 
@@ -87,22 +86,22 @@ public class DrawerLayout extends LinearLayout implements DrawerImpl, DrawerCont
         mFootView.setVisibility(show ? VISIBLE : GONE);
     }
 
-    private CustomScrollView.ScrollViewListener contentScrollChange = new CustomScrollView.ScrollViewListener() {
-        @Override
-        public void onScrollChanged(CustomScrollView scrollView, int x, int y, int oldX, int oldY) {
-            Log.e("customScroll", "width : " + getWidth() + " y : " + y + " height : " + getHeight() + "oldY : " + oldY);
-        }
-    };
-
     private CustomScrollView.ISmartScrollChangedListener iSmartScrollChangedListener = new CustomScrollView.ISmartScrollChangedListener() {
         @Override
-        public void onScrolledToBottom() {
-            Log.e("customScroll", "is scroll to bottom");
+        public void onScrolledToBottom(float startY, float moveY) {
+            Log.e("customScroll", "is scroll to bottom " + "startY : " + startY + " moveY : " + moveY);
+            mHeadView.setVisibility(GONE);
         }
 
         @Override
-        public void onScrolledToTop() {
-            Log.e("customScroll", "is scroll to top");
+        public void onScrolledToTop(float startY, float moveY) {
+            Log.e("customScroll", "is scroll to top" + "startY : " + startY + " moveY : " + moveY);
+            mHeadView.setVisibility(VISIBLE);
+        }
+
+        @Override
+        public void onScroll(float startY, float moveY) {
+
         }
     };
 }
